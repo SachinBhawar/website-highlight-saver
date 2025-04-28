@@ -11,6 +11,7 @@ const saveButton = document.createElement("div");
 
 saveButton.textContent = "Save Highlight";
 
+// Style the floating button
 saveButton.style.cssText = `
   position: absolute;
   background-color: #4285f4;
@@ -42,16 +43,18 @@ document.addEventListener("mouseup", function (event) {
 
     if (selectedText) {
         currentSelection.text = selectedText;
-        currentSelection.range = selection.getRangeAt(0);
 
-        // Position the save button near the selection
-        const rect = currentSelection.range.getBoundingClientRect();
+        if (selection.rangeCount > 0) {
+            currentSelection.range = selection.getRangeAt(0);
 
-        saveButton.style.left = `${rect.left + window.scrollX}px`;
-        saveButton.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        saveButton.style.display = "block";
+            const rect = currentSelection.range.getBoundingClientRect();
+
+            saveButton.style.left = `${rect.left + window.scrollX}px`;
+            saveButton.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            saveButton.style.display = "block";
+        }
     } else {
-        // Don't hide the button if the click was on the button itself
+        // Hide button if no text is selected and click wasn't on button
         if (event.target !== saveButton) {
             saveButton.style.display = "none";
             currentSelection = { text: "", range: null };
@@ -62,7 +65,7 @@ document.addEventListener("mouseup", function (event) {
 // Save the highlighted text
 saveButton.addEventListener("click", function (event) {
     event.stopPropagation();
-
+    event.preventDefault();
     if (currentSelection.text) {
         const pageUrl = window.location.href;
         const pageTitle = document.title;
@@ -79,9 +82,18 @@ saveButton.addEventListener("click", function (event) {
         console.log("Highlight object created:", highlight);
 
         try {
-            // Use chrome.storage directly
             chrome.storage.local.get("highlights", function (data) {
-                const highlights = data.highlights || [];
+                if (chrome.runtime.lastError) {
+                    console.error("Error getting from storage:", chrome.runtime.lastError);
+                    saveButton.textContent = "Error loading!";
+                    setTimeout(() => {
+                        saveButton.textContent = "Save Highlight";
+                    }, 3000);
+                    return;
+                }
+
+                const highlights = Array.isArray(data.highlights) ? data.highlights : [];
+
                 highlights.push(highlight);
 
                 chrome.storage.local.set({ highlights: highlights }, function () {
@@ -107,7 +119,7 @@ saveButton.addEventListener("click", function (event) {
             saveButton.textContent = "Error: " + error.message;
             setTimeout(() => {
                 saveButton.textContent = "Save Highlight";
-            }, 3000);
+            }, 1500);
         }
     } else {
         saveButton.textContent = "No text selected!";
@@ -120,6 +132,6 @@ saveButton.addEventListener("click", function (event) {
 
 // Prevent clicks on the save button from clearing the selection
 saveButton.addEventListener("mousedown", function (event) {
-    event.stopPropagation();
+    event.stopPropagation(); // Stop event bubbling
     event.preventDefault();
 });
