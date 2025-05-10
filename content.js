@@ -29,6 +29,7 @@ saveButton.style.cssText = `
   border: none;
 `;
 
+// add the button to document body
 document.body.appendChild(saveButton);
 
 // Listen for text selection
